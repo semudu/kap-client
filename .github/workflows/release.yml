@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0          # full history required for hatch-vcs tag detection
       - uses: astral-sh/setup-uv@v8.1.0
       - name: Install Hatch
         run: uv tool install hatch

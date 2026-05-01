@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "kap-client"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Fetch company and fund disclosures from https://www.kap.org.tr"
 readme = "README.md"
 authors = [{ name = "Serhat Mutlu Durmaz", email = "serhat.md@gmail.com" }]
@@ -42,6 +42,12 @@ Repository = "https://github.com/semudu/kap-client"
 "Bug Tracker" = "https://github.com/semudu/kap-client/issues"
 Changelog = "https://github.com/semudu/kap-client/releases"
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/kap_client/_version.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/kap_client"]
 
@@ -61,3 +67,8 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "hatch-vcs>=0.5.0",
+]
