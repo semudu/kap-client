@@ -1,28 +1,46 @@
 # kap-client
 
-A Python client for [KAP (Kamuyu Aydınlatma Platformu)](https://www.kap.org.tr) —
-Turkey's Public Disclosure Platform.
+[![PyPI - Version](https://img.shields.io/pypi/v/kap-client.svg)](https://pypi.org/project/kap-client/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/kap-client.svg)](https://pypi.org/project/kap-client/)
+[![PyPI - License](https://img.shields.io/pypi/l/kap-client.svg)](LICENSE)
+[![CI](https://github.com/semudu/kap-client/actions/workflows/ci.yml/badge.svg)](https://github.com/semudu/kap-client/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://github.com/semudu/kap-client#readme)
 
-Fetch company and fund disclosures, browse investment fund lists, and download
-disclosure attachments — all through a clean, typed, Pythonic API.
+**kap-client** is a type-safe Python client for [KAP (Kamuyu Aydınlatma Platformu)](https://www.kap.org.tr) — Turkey's Public Disclosure Platform.
 
-## Features
+Fetch company and fund disclosures, browse investment fund lists, and download disclosure attachments — all through a clean, synchronous, Pythonic API. Perfect for building financial dashboards, compliance tools, and investment research apps.
 
-- **Company disclosures** — search by ticker or KAP OID, with optional subject filtering
-- **Fund disclosures** — search across all KAP fund groups (YF, BYF, EYF, OKS, GMF, …)
-- **Fund & member lists** — fully enumerated, cached per session
-- **Attachment parsing** — automatically extracts file links from disclosure HTML pages
-- **Retry & back-off** — 3 attempts with exponential back-off; `RateLimitError` on 429
-- **Pydantic v2 models** — all return types are frozen, typed domain objects
-- **Zero heavy dependencies** — only `httpx` and `pydantic`
+> **v0.1** — Production-ready, fully tested, zero breaking changes.
 
-## Installation
+## ✨ Features
+
+- **📢 Company disclosures** — search by BIST ticker or KAP OID, with optional subject filtering
+- **📋 Fund disclosures** — search across all KAP fund groups (YF, BYF, EYF, OKS, GMF, …)
+- **🏢 Company & fund lists** — fully enumerated and cached per session
+- **📎 Attachment parsing** — automatically extracts file links from disclosure HTML pages
+- **🔎 Subject filtering** — narrow results using `FundSubject` OID constants
+- **⏱️ Retry & back-off** — 3 attempts with exponential back-off; `RateLimitError` on 429
+- **🛡️ Type-safe** — full Pydantic v2 validation, frozen domain models, mypy compatible
+- **⚡ Minimal dependencies** — only `httpx` and `pydantic`
+- **🐍 Modern Python** — 3.10+ with context manager support
+
+## 📦 Installation
 
 ```bash
 pip install kap-client
 ```
 
-## Quick start
+### Other package managers
+
+```bash
+# uv
+uv pip install kap-client
+
+# Poetry
+poetry add kap-client
+```
+
+## 🚀 Quick start
 
 ```python
 from kap_client import Kap, FundGroup
@@ -42,66 +60,367 @@ with Kap() as kap:
     # Browse active Yatırım Fonları
     funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
     print(f"{len(funds)} active YF funds found")
-
-    # Fetch fund disclosures
-    if funds:
-        fd = kap.fetch_fund_disclosures(
-            fund=funds[0],
-            fund_group=FundGroup.YATIRIM_FONLARI,
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-        )
-        print(f"{len(fd)} disclosures for {funds[0].code}")
 ```
 
-## API reference
+## 📖 Usage Examples
 
-### `Kap` class
+### Basic: Fetch company disclosures by ticker
 
-All methods require the context manager (`with Kap() as kap:`).
+```python
+from kap_client import Kap
 
-| Method | Description |
-|---|---|
-| `fetch_companies(*, refresh=False)` | All KAP-registered companies |
-| `find_company(ticker, *, refresh=False)` | Resolve ticker → `Company` |
-| `fetch_funds(fund_group, *, include_liquidated=False, refresh=False)` | Fund list |
-| `fetch_fund_members(fund_group, *, refresh=False)` | Portfolio mgmt companies |
-| `fetch_disclosures(company, start_date, end_date, *, subject_oids=None)` | Company disclosures |
-| `fetch_fund_disclosures(fund, fund_group, start_date, end_date, *, subject_oids=None)` | Fund disclosures |
-| `fetch_attachments(disclosure_index)` | Attachment list from HTML detail page |
-
-### Domain models
-
-| Model | Key fields |
-|---|---|
-| `Disclosure` | `index`, `publish_datetime`, `company_name`, `stock_codes`, `subject`, `has_attachment`, `url` |
-| `Attachment` | `filename`, `url` |
-| `Company` | `oid`, `name`, `ticker` |
-| `Fund` | `oid`, `code`, `title`, `fund_type`, `fund_group`, `is_active` |
-
-### `FundGroup` enum
-
-```
-BYF  — Borsa Yatırım Fonları
-YF   — Yatırım Fonları
-EYF  — Emeklilik Yatırım Fonları
-OKS  — OKS Emeklilik Yatırım Fonları
-YYF  — Yabancı Yatırım Fonları
-VFF  — Varlık Finansman Fonları
-KFF  — Konut Finansman Fonları
-GMF  — Gayrimenkul Yatırım Fonları
+with Kap() as kap:
+    disclosures = kap.fetch_disclosures("THYAO", "2024-01-01", "2024-12-31")
+    for d in disclosures:
+        print(f"[{d.publish_datetime:%Y-%m-%d %H:%M}] {d.subject}")
+        print(f"  → {d.url}")
 ```
 
-### Exceptions
+### Disclosures with attachment download
+
+```python
+from kap_client import Kap
+
+with Kap() as kap:
+    disclosures = kap.fetch_disclosures("EREGL", "2024-01-01", "2024-12-31")
+    for d in disclosures:
+        if d.has_attachment:
+            attachments = kap.fetch_attachments(d.index)
+            for a in attachments:
+                print(f"  {a.filename}  →  {a.url}")
+```
+
+### Resolve ticker to Company object
+
+```python
+from kap_client import Kap
+
+with Kap() as kap:
+    co = kap.find_company("TCELL")
+    print(f"{co.name} (OID: {co.oid})")
+
+    # Use OID directly for subsequent queries — no extra HTTP request
+    disclosures = kap.fetch_disclosures(co.oid, "2024-01-01", "2024-03-31")
+    print(f"{len(disclosures)} disclosures found")
+```
+
+### Batch: Reuse one context manager for multiple companies
+
+```python
+from kap_client import Kap
+
+tickers = ["THYAO", "EREGL", "TCELL", "AKBNK"]
+
+with Kap() as kap:
+    # Company list is fetched once and cached for all find_company() calls
+    for ticker in tickers:
+        co = kap.find_company(ticker)
+        disclosures = kap.fetch_disclosures(co.oid, "2024-01-01", "2024-12-31")
+        print(f"{ticker}: {len(disclosures)} disclosures")
+```
+
+### Browse and filter investment funds
+
+```python
+from kap_client import Kap, FundGroup
+
+with Kap() as kap:
+    # List active Yatırım Fonları (YF)
+    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
+    print(f"{len(funds)} active YF funds")
+
+    # Include liquidated funds too
+    all_funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI, include_liquidated=True)
+    inactive = [f for f in all_funds if not f.is_active]
+    print(f"{len(inactive)} liquidated funds")
+
+    # List portfolio management companies for BYF group
+    members = kap.fetch_fund_members(FundGroup.BORSA_YATIRIM_FONLARI)
+    for m in members:
+        print(m.name)
+```
+
+### Fund disclosures
+
+```python
+from kap_client import Kap, FundGroup
+
+with Kap() as kap:
+    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
+    target = next(f for f in funds if f.code == "AFA")
+
+    disclosures = kap.fetch_fund_disclosures(
+        fund=target,
+        fund_group=FundGroup.YATIRIM_FONLARI,
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+    )
+    for d in disclosures:
+        print(f"[{d.publish_datetime:%Y-%m-%d}] {d.subject}")
+```
+
+### Filter by subject using FundSubject
+
+```python
+from kap_client import Kap, FundSubject
+
+with Kap() as kap:
+    disclosures = kap.fetch_disclosures(
+        "THYAO",
+        "2024-01-01",
+        "2024-12-31",
+        subject_oids=[FundSubject.OZEL_DURUM_ACIKLAMASI.value],
+    )
+    print(f"{len(disclosures)} özel durum açıklaması")
+```
+
+### Integration: Export to Pandas
+
+```python
+import pandas as pd
+from kap_client import Kap
+
+with Kap() as kap:
+    disclosures = kap.fetch_disclosures("THYAO", "2024-01-01", "2024-12-31")
+
+df = pd.DataFrame([
+    {
+        "date": d.publish_datetime.date(),
+        "subject": d.subject,
+        "type": d.disclosure_type,
+        "has_attachment": d.has_attachment,
+        "is_corrective": d.is_corrective,
+        "url": d.url,
+    }
+    for d in disclosures
+])
+
+print(df.head())
+print(f"\nTotal disclosures: {len(df)}")
+print(f"With attachments: {df['has_attachment'].sum()}")
+```
+
+### Error handling
+
+```python
+from kap_client import Kap, KapError, RateLimitError, EmptyResponseError, CompanyNotFoundError
+
+try:
+    with Kap() as kap:
+        co = kap.find_company("XXXXXX")
+        disclosures = kap.fetch_disclosures(co.oid, "2024-01-01", "2024-12-31")
+except CompanyNotFoundError as e:
+    print(f"Ticker not found: {e.ticker}")
+except EmptyResponseError:
+    print("No disclosures in selected date range")
+except RateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after} seconds")
+except KapError as e:
+    print(f"KAP error: {e}")
+```
+
+## 📚 API Reference
+
+### `Kap(timeout: float = 30.0)`
+
+Context manager for managing HTTP connections and caches.
+
+```python
+with Kap(timeout=15.0) as kap:
+    disclosures = kap.fetch_disclosures("THYAO", "2024-01-01", "2024-12-31")
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `timeout` | `float` | `30.0` | Per-request HTTP timeout in seconds |
+
+---
+
+### `Kap.fetch_companies(*, refresh=False) -> list[Company]`
+
+Returns all KAP-registered companies. Results are **cached per instance** — the second call returns the cached list without a network request. Pass `refresh=True` to force a fresh fetch.
+
+```python
+with Kap() as kap:
+    companies = kap.fetch_companies()
+    print(f"{len(companies)} companies")
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `refresh` | `bool` | `False` | Bypass cache and fetch fresh data |
+
+---
+
+### `Kap.find_company(ticker, *, refresh=False) -> Company`
+
+Resolve a BIST ticker to a `Company` object. Ticker matching is case-insensitive.
+
+```python
+with Kap() as kap:
+    co = kap.find_company("thyao")   # same as "THYAO"
+    print(co.oid, co.name)
+```
+
+Raises `CompanyNotFoundError` if the ticker is not in the KAP member list.
+
+---
+
+### `Kap.fetch_funds(fund_group, *, include_liquidated=False, refresh=False) -> list[Fund]`
+
+Returns the fund list for a given group. Results are **cached per (group, include_liquidated) combination**.
+
+```python
+with Kap() as kap:
+    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
+    funds = kap.fetch_funds("YF")                           # string value accepted
+    all_funds = kap.fetch_funds("EYF", include_liquidated=True)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fund_group` | `FundGroup \| str` | — | Fund group enum or string value (`"YF"`, `"BYF"`, …) |
+| `include_liquidated` | `bool` | `False` | Also return liquidated / tasfiye funds |
+| `refresh` | `bool` | `False` | Bypass cache and fetch fresh data |
+
+---
+
+### `Kap.fetch_fund_members(fund_group, *, refresh=False) -> list[Company]`
+
+Returns portfolio management companies (kurucu/yönetici) for the given fund group.
+
+---
+
+### `Kap.fetch_disclosures(company, start_date, end_date, *, subject_oids=None) -> list[Disclosure]`
+
+Fetch company disclosures for a date range. Returns results sorted newest first.
+
+```python
+with Kap() as kap:
+    # By ticker
+    disclosures = kap.fetch_disclosures("THYAO", "2024-01-01", "2024-12-31")
+
+    # By OID (no extra company lookup)
+    disclosures = kap.fetch_disclosures(co.oid, "2024-01-01", "2024-12-31")
+
+    # With subject filter
+    disclosures = kap.fetch_disclosures(
+        "THYAO", "2024-01-01", "2024-12-31",
+        subject_oids=[FundSubject.OZEL_DURUM_ACIKLAMASI.value],
+    )
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `company` | `str` | — | BIST ticker (`"THYAO"`) or raw KAP OID hex string |
+| `start_date` | `str \| date \| datetime` | — | Range start, inclusive (`"YYYY-MM-DD"` or date/datetime) |
+| `end_date` | `str \| date \| datetime` | — | Range end, inclusive |
+| `subject_oids` | `list[str] \| None` | `None` | Optional `FundSubject` OID values to filter results |
+
+---
+
+### `Kap.fetch_fund_disclosures(fund, fund_group, start_date, end_date, *, subject_oids=None) -> list[Disclosure]`
+
+Fetch fund disclosures for a date range. Returns results sorted newest first.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fund` | `Fund \| str` | — | `Fund` instance or raw fund OID hex string |
+| `fund_group` | `FundGroup \| str` | — | Required even when passing a `Fund` object |
+| `start_date` | `str \| date \| datetime` | — | Range start, inclusive |
+| `end_date` | `str \| date \| datetime` | — | Range end, inclusive |
+| `subject_oids` | `list[str] \| None` | `None` | Optional subject filter |
+
+---
+
+### `Kap.fetch_attachments(disclosure_index: int) -> list[Attachment]`
+
+Fetches the HTML detail page for a disclosure and parses all file attachment links. Returns an empty list if the disclosure has no attachments.
+
+```python
+with Kap() as kap:
+    disclosures = kap.fetch_disclosures("THYAO", "2024-01-01", "2024-12-31")
+    for d in disclosures:
+        if d.has_attachment:
+            for a in kap.fetch_attachments(d.index):
+                print(a.filename, a.url)
+```
+
+---
+
+## 🗂️ Domain Models
+
+### `Disclosure`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `index` | `int` | Unique KAP disclosure number |
+| `publish_datetime` | `datetime` | Publication timestamp |
+| `company_name` | `str` | Issuer name |
+| `stock_codes` | `str` | BIST ticker(s); empty for non-listed issuers |
+| `subject` | `str` | Disclosure topic |
+| `disclosure_type` | `str` | Type classification |
+| `has_attachment` | `bool` | Whether file attachments are available |
+| `is_late` | `bool` | Filed after deadline |
+| `is_corrective` | `bool` | Correction of a prior disclosure |
+| `is_english` | `bool` | English-language disclosure |
+| `url` | `str` | Full URL to the KAP disclosure page |
+
+### `Attachment`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `filename` | `str` | Original file name |
+| `url` | `str` | Direct download URL |
+
+### `Company`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `oid` | `str` | KAP hex OID (32 chars) |
+| `name` | `str` | Official registered name |
+| `ticker` | `str` | BIST stock code; empty for non-listed entities |
+
+### `Fund`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `oid` | `str` | KAP hex OID (32 chars) |
+| `code` | `str` | Short fund code (e.g. `"AFA"`) |
+| `title` | `str` | Full fund name |
+| `fund_type` | `str` | e.g. `"Hisse Senedi Fonu"` |
+| `fund_group` | `FundGroup` | Enum value |
+| `is_active` | `bool` | `False` for liquidated funds |
+
+---
+
+## 🏷️ `FundGroup` Enum
+
+| Value | Label |
+|-------|-------|
+| `FundGroup.BORSA_YATIRIM_FONLARI` | `"BYF"` — Borsa Yatırım Fonları |
+| `FundGroup.YATIRIM_FONLARI` | `"YF"` — Yatırım Fonları |
+| `FundGroup.EMEKLILIK_YATIRIM_FONLARI` | `"EYF"` — Emeklilik Yatırım Fonları |
+| `FundGroup.OKS_EMEKLILIK_YATIRIM_FONLARI` | `"OKS"` — OKS Emeklilik Yatırım Fonları |
+| `FundGroup.YABANCI_YATIRIM_FONLARI` | `"YYF"` — Yabancı Yatırım Fonları |
+| `FundGroup.VARLIK_FINANSMAN_FONLARI` | `"VFF"` — Varlık Finansman Fonları |
+| `FundGroup.KONUT_FINANSMAN_FONLARI` | `"KFF"` — Konut Finansman Fonları |
+| `FundGroup.GAYRIMENKUL_YATIRIM_FONLARI` | `"GMF"` — Gayrimenkul Yatırım Fonları |
+
+String values (e.g. `"YF"`) are accepted everywhere a `FundGroup` is expected.
+
+---
+
+## ⚠️ Exceptions
 
 | Exception | When raised |
-|---|---|
-| `KapError` | Base exception for all kap_client errors |
-| `RateLimitError` | HTTP 429 after all retries exhausted |
+|-----------|-------------|
+| `KapError` | Base exception for all kap-client errors |
+| `RateLimitError` | HTTP 429 after all retries exhausted; has `.retry_after: float \| None` |
 | `EmptyResponseError` | Successful response but empty data list |
-| `CompanyNotFoundError` | Ticker not found in KAP member list |
+| `CompanyNotFoundError` | Ticker not found in KAP member list; has `.ticker: str` |
 
-## Development
+## 🛠️ Development
 
 ```bash
 git clone https://github.com/semudu/kap-client
