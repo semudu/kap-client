@@ -1,0 +1,23 @@
+[
+  {
+    "fundCode": "AFA",
+    "fundTitle": "AK PORTFÖY AMERİKAN DEV ŞİRKETLERİ YABANCI HİSSE SENEDİ FONU",
+    "oid": "4028e4a240f2ef4c01412adf824d0506",
+    "fundType": "Yabancı Hisse Senedi Fonu",
+    "isActive": true
+  },
+  {
+    "fundCode": "AFB",
+    "fundTitle": "AK PORTFÖY BRİKS ÜLKELERİ YABANCI HİSSE SENEDİ FONU",
+    "oid": "4028e4a240f2ef4c01412ae1234d0507",
+    "fundType": "Yabancı Hisse Senedi Fonu",
+    "isActive": true
+  },
+  {
+    "fundCode": "AKB",
+    "fundTitle": "AK PORTFÖY PARA PİYASASI FONU",
+    "oid": "4028e4a240f2ef4c01412ae2345d0508",
+    "fundType": "Para Piyasası Fonu",
+    "isActive": true
+  }
+]

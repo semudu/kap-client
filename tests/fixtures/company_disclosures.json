@@ -1,0 +1,41 @@
+[
+  {
+    "disclosureIndex": 1234567,
+    "publishDate": "2024-03-15 09:30:00",
+    "memberTitle": "TÜRK HAVA YOLLARI A.O.",
+    "stockCodes": "THYAO",
+    "subject": "Özel Durum Açıklaması",
+    "disclosureType": "DG",
+    "disclosureClass": "ODA",
+    "hasAttachment": true,
+    "isLate": false,
+    "isCorrective": false,
+    "isEnglish": false
+  },
+  {
+    "disclosureIndex": 1234568,
+    "publishDate": "2024-03-16 14:00:00",
+    "memberTitle": "TÜRK HAVA YOLLARI A.O.",
+    "stockCodes": "THYAO",
+    "subject": "Finansal Rapor",
+    "disclosureType": "FR",
+    "disclosureClass": "FR",
+    "hasAttachment": true,
+    "isLate": false,
+    "isCorrective": false,
+    "isEnglish": false
+  },
+  {
+    "disclosureIndex": 1234569,
+    "publishDate": "2024-03-17 16:00:00",
+    "memberTitle": "TÜRK HAVA YOLLARI A.O.",
+    "stockCodes": "THYAO",
+    "subject": "Genel Kurul Toplantısı",
+    "disclosureType": "DG",
+    "disclosureClass": "GK",
+    "hasAttachment": false,
+    "isLate": false,
+    "isCorrective": false,
+    "isEnglish": false
+  }
+]

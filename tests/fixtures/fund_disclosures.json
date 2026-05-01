@@ -1,0 +1,28 @@
+[
+  {
+    "disclosureIndex": 9876543,
+    "publishDate": "2024-03-15 10:00:00",
+    "memberTitle": "AK PORTFÖY YÖNETİMİ A.Ş.",
+    "stockCodes": "",
+    "subject": "Portföy Dağılım Raporu",
+    "disclosureType": "FD",
+    "disclosureClass": null,
+    "hasAttachment": true,
+    "isLate": false,
+    "isCorrective": false,
+    "isEnglish": false
+  },
+  {
+    "disclosureIndex": 9876544,
+    "publishDate": "2024-03-01 09:00:00",
+    "memberTitle": "AK PORTFÖY YÖNETİMİ A.Ş.",
+    "stockCodes": "",
+    "subject": "Altı Aylık Rapor",
+    "disclosureType": "FD",
+    "disclosureClass": null,
+    "hasAttachment": true,
+    "isLate": false,
+    "isCorrective": false,
+    "isEnglish": false
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "memberOid": "4028e4a252438b3301524396b9510024",
+    "memberTitle": "TÜRK HAVA YOLLARI A.O.",
+    "stockCodes": "THYAO",
+    "memberGroup": "BIST"
+  },
+  {
+    "memberOid": "4028e4a252438b3301524396c1ae0026",
+    "memberTitle": "TURKCELL İLETİŞİM HİZMETLERİ A.Ş.",
+    "stockCodes": "TCELL",
+    "memberGroup": "BIST"
+  },
+  {
+    "memberOid": "4028e4a252438b3301524396d2bc0030",
+    "memberTitle": "AK PORTFÖY YÖNETİMİ A.Ş.",
+    "stockCodes": "",
+    "memberGroup": "PORTFOY"
+  }
+]
