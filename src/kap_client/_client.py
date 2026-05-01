@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -311,14 +311,14 @@ class KapHttpClient:
     def _extract_list(data: Any, url: str) -> list[dict[str, Any]]:
         """Normalise KAP response shapes into a plain list of dicts."""
         if isinstance(data, list):
-            return data
+            return cast(list[dict[str, Any]], data)
         if isinstance(data, dict):
             # Try common envelope keys
             for key in ("data", "list", "result", "resultList", "items"):
                 if key in data and isinstance(data[key], list):
-                    return data[key]
+                    return cast(list[dict[str, Any]], data[key])
             # Single-object response — wrap it
-            return [data]
+            return [cast(dict[str, Any], data)]
         raise KapError(f"Unexpected response shape from {url}: {type(data).__name__}")
 
     @staticmethod
