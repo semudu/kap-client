@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from kap_client._endpoints import CompanyRow, DisclosureRow, FundGroup, FundRow
 from kap_client._models import Attachment, Company, Disclosure, Fund
 
-
 # ---------------------------------------------------------------------------
 # DisclosureRow → Disclosure
 # ---------------------------------------------------------------------------

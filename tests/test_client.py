@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import json
-
-import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from kap_client._client import KapHttpClient, _AttachmentLinkParser
+from kap_client._client import KapHttpClient
 from kap_client._endpoints import FUND_LIST_URL, MEMBER_DISCLOSURE_QUERY_URL
 from kap_client.exceptions import KapError, RateLimitError
-
 
 # ---------------------------------------------------------------------------
 # POST tests
@@ -49,9 +45,8 @@ def test_post_raises_on_http_error(httpx_mock: HTTPXMock) -> None:
         status_code=503,
         text="Service Unavailable",
     )
-    with KapHttpClient() as client:
-        with pytest.raises(KapError, match="HTTP 503"):
-            client.post(MEMBER_DISCLOSURE_QUERY_URL, {})
+    with KapHttpClient() as client, pytest.raises(KapError, match="HTTP 503"):
+        client.post(MEMBER_DISCLOSURE_QUERY_URL, {})
 
 
 def test_post_raises_rate_limit_after_retries(httpx_mock: HTTPXMock) -> None:
@@ -63,9 +58,8 @@ def test_post_raises_rate_limit_after_retries(httpx_mock: HTTPXMock) -> None:
             status_code=429,
             headers={"Retry-After": "5"},
         )
-    with KapHttpClient() as client:
-        with pytest.raises(RateLimitError) as exc_info:
-            client.post(MEMBER_DISCLOSURE_QUERY_URL, {})
+    with KapHttpClient() as client, pytest.raises(RateLimitError) as exc_info:
+        client.post(MEMBER_DISCLOSURE_QUERY_URL, {})
     assert exc_info.value.retry_after == 5.0
 
 
@@ -96,9 +90,8 @@ def test_post_raises_on_invalid_json(httpx_mock: HTTPXMock) -> None:
         text="not json",
         headers={"Content-Type": "text/html"},
     )
-    with KapHttpClient() as client:
-        with pytest.raises(KapError, match="Invalid JSON"):
-            client.post(MEMBER_DISCLOSURE_QUERY_URL, {})
+    with KapHttpClient() as client, pytest.raises(KapError, match="Invalid JSON"):
+        client.post(MEMBER_DISCLOSURE_QUERY_URL, {})
 
 
 # ---------------------------------------------------------------------------
@@ -117,9 +110,8 @@ def test_get_returns_list(httpx_mock: HTTPXMock, fund_list_json: list) -> None:
 def test_get_raises_on_http_error(httpx_mock: HTTPXMock) -> None:
     url = f"{FUND_LIST_URL}/YF/Y"
     httpx_mock.add_response(method="GET", url=url, status_code=404, text="Not Found")
-    with KapHttpClient() as client:
-        with pytest.raises(KapError, match="HTTP 404"):
-            client.get(url)
+    with KapHttpClient() as client, pytest.raises(KapError, match="HTTP 404"):
+        client.get(url)
 
 
 # ---------------------------------------------------------------------------

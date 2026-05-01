@@ -5,16 +5,16 @@ from __future__ import annotations
 import pytest
 from pytest_httpx import HTTPXMock
 
-from kap_client import Kap, FundGroup
+from kap_client import FundGroup, Kap
 from kap_client._endpoints import (
     BASE_URL,
+    FUND_DISCLOSURE_QUERY_URL,
     FUND_LIST_URL,
     FUND_MEMBERS_URL,
     MEMBER_DISCLOSURE_QUERY_URL,
-    FUND_DISCLOSURE_QUERY_URL,
 )
 from kap_client._kap import MEMBER_LIST_URL
-from kap_client.exceptions import CompanyNotFoundError, KapError
+from kap_client.exceptions import CompanyNotFoundError
 
 DISCLOSURE_URL_PREFIX = f"{BASE_URL}/tr/Bildirim/"
 
@@ -72,9 +72,8 @@ def test_find_company_case_insensitive(httpx_mock: HTTPXMock, company_list_json:
 
 def test_find_company_not_found(httpx_mock: HTTPXMock, company_list_json: list) -> None:
     httpx_mock.add_response(method="GET", url=MEMBER_LIST_URL, json=company_list_json)
-    with Kap() as kap:
-        with pytest.raises(CompanyNotFoundError, match="XXXX"):
-            kap.find_company("XXXX")
+    with Kap() as kap, pytest.raises(CompanyNotFoundError, match="XXXX"):
+        kap.find_company("XXXX")
 
 
 # ---------------------------------------------------------------------------
