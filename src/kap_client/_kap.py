@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import Union
 
 from ._client import KapHttpClient
 from ._endpoints import (
@@ -39,7 +38,7 @@ logger = logging.getLogger(__name__)
 # KAP member list endpoint — returns all listed companies and funds
 MEMBER_LIST_URL = f"{BASE_URL}/tr/api/memberCompanyInfoList"
 
-DateLike = Union[str, date, datetime]
+DateLike = str | date | datetime
 
 
 def _date_str(d: DateLike) -> str:

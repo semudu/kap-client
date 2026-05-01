@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from ._endpoints import BASE_URL, DisclosureRow, FundGroup, FundRow, CompanyRow
+from ._endpoints import BASE_URL, CompanyRow, DisclosureRow, FundGroup, FundRow
 
 if TYPE_CHECKING:
     pass

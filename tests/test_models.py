@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from pydantic import ValidationError
 
 from kap_client._endpoints import CompanyRow, DisclosureRow, FundGroup, FundRow
 from kap_client._models import Attachment, Company, Disclosure, Fund
@@ -71,7 +72,7 @@ def test_disclosure_is_frozen() -> None:
         "publishDate": "2024-01-01 00:00:00",
     }
     d = Disclosure.from_row(DisclosureRow.model_validate(raw))
-    with pytest.raises(Exception):  # ValidationError for frozen model
+    with pytest.raises(ValidationError):
         d.index = 999  # type: ignore[misc]
 
 
@@ -98,7 +99,7 @@ def test_company_from_row_no_ticker() -> None:
 def test_company_is_frozen(company_list_json: list) -> None:
     row = CompanyRow.model_validate(company_list_json[0])
     c = Company.from_row(row)
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         c.name = "Changed"  # type: ignore[misc]
 
 
@@ -126,7 +127,7 @@ def test_fund_from_row_all_groups(fund_list_json: list) -> None:
 def test_fund_is_frozen(fund_list_json: list) -> None:
     row = FundRow.model_validate(fund_list_json[0])
     f = Fund.from_row(row, FundGroup.YATIRIM_FONLARI)
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         f.code = "XXX"  # type: ignore[misc]
 
 
@@ -143,5 +144,5 @@ def test_attachment_fields() -> None:
 
 def test_attachment_is_frozen() -> None:
     a = Attachment(filename="x.pdf", url="https://example.com/x.pdf")
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         a.filename = "y.pdf"  # type: ignore[misc]

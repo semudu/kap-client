@@ -9,7 +9,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from kap_client._client import KapHttpClient, _AttachmentLinkParser
-from kap_client._endpoints import MEMBER_DISCLOSURE_QUERY_URL, FUND_LIST_URL
+from kap_client._endpoints import FUND_LIST_URL, MEMBER_DISCLOSURE_QUERY_URL
 from kap_client.exceptions import KapError, RateLimitError
 
 
