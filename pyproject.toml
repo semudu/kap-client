@@ -45,9 +45,6 @@ Changelog = "https://github.com/semudu/kap-client/releases"
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.build.hooks.vcs]
-version-file = "src/kap_client/_version.py"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/kap_client"]
 
