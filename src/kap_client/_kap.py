@@ -17,7 +17,6 @@ from datetime import date, datetime
 
 from ._client import KapHttpClient
 from ._endpoints import (
-    BASE_URL,
     COMPANY_ITEMS_URL,
     FILE_DOWNLOAD_URL,
     FUND_DISCLOSURE_QUERY_URL,
