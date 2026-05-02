@@ -24,6 +24,23 @@ def test_disclosure_from_row_basic(company_disclosures_json: list) -> None:
     assert d.has_attachment is True
     assert d.is_corrective is False
     assert d.url == "https://www.kap.org.tr/tr/Bildirim/1234567"
+    # company disclosures have no fund_code
+    assert d.fund_code == ""
+
+
+def test_disclosure_from_row_fund(fund_disclosures_json: list) -> None:
+    """Fund disclosures populate fund_code, summary, and company_name from kapTitle."""
+    row = DisclosureRow.model_validate(fund_disclosures_json[0])
+    d = Disclosure.from_row(row)
+    assert d.fund_code == "AFA"
+    assert d.company_name == "AK PORTFÖY PARA PİYASASI FONU"
+    assert d.summary == "Mart 2024 portföy dağılım raporu."
+
+
+def test_disclosure_summary_empty_when_absent(fund_disclosures_json: list) -> None:
+    row = DisclosureRow.model_validate(fund_disclosures_json[1])
+    d = Disclosure.from_row(row)
+    assert d.summary == ""
 
 
 def test_disclosure_publish_datetime_parsed(company_disclosures_json: list) -> None:
@@ -123,6 +140,13 @@ def test_fund_from_row_all_groups(fund_list_json: list) -> None:
         assert f.fund_group == group
 
 
+def test_fund_group_new_values() -> None:
+    """GSF, PFF, TEYF must be present and have correct codes."""
+    assert FundGroup.GIRISIM_SERMAYESI_FONLARI.value == "GSF"
+    assert FundGroup.PROJE_FINANSMAN_FONLARI.value == "PFF"
+    assert FundGroup.TASFIYE_EDILEN_YATIRIM_FONLARI.value == "TEYF"
+
+
 def test_fund_is_frozen(fund_list_json: list) -> None:
     row = FundRow.model_validate(fund_list_json[0])
     f = Fund.from_row(row, FundGroup.YATIRIM_FONLARI)
@@ -136,9 +160,9 @@ def test_fund_is_frozen(fund_list_json: list) -> None:
 
 
 def test_attachment_fields() -> None:
-    a = Attachment(filename="report.pdf", url="https://www.kap.org.tr/tr/api/file/123")
+    a = Attachment(filename="report.pdf", url="https://www.kap.org.tr/tr/api/file/download/abc123")
     assert a.filename == "report.pdf"
-    assert "kap.org.tr" in a.url
+    assert "file/download" in a.url
 
 
 def test_attachment_is_frozen() -> None:

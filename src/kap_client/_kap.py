@@ -18,11 +18,13 @@ from datetime import date, datetime
 from ._client import KapHttpClient
 from ._endpoints import (
     BASE_URL,
-    DISCLOSURE_DETAIL_URL,
+    COMPANY_ITEMS_URL,
+    FILE_DOWNLOAD_URL,
     FUND_DISCLOSURE_QUERY_URL,
     FUND_LIST_URL,
     FUND_MEMBERS_URL,
     MEMBER_DISCLOSURE_QUERY_URL,
+    NOTIFICATION_ATTACHMENT_URL,
     CompanyRow,
     DisclosureRow,
     FundDisclosureQueryBody,
@@ -34,9 +36,6 @@ from ._models import Attachment, Company, Disclosure, Fund
 from .exceptions import CompanyNotFoundError
 
 logger = logging.getLogger(__name__)
-
-# KAP member list endpoint — returns all listed companies and funds
-MEMBER_LIST_URL = f"{BASE_URL}/tr/api/memberCompanyInfoList"
 
 DateLike = str | date | datetime
 
@@ -240,8 +239,9 @@ class Kap:
         Parameters
         ----------
         company:
-            Ticker symbol (e.g. ``"THYAO"``) *or* raw KAP member OID hex string.
-            Ticker strings are resolved via :meth:`fetch_companies`.
+            Ticker symbol (e.g. ``"THYAO"``).  Passed as-is into
+            ``mkkMemberOidList`` if it looks like an OID, otherwise the
+            company list is fetched to resolve the OID.
         start_date:
             Range start (inclusive).  String ``"YYYY-MM-DD"``, ``date``, or
             ``datetime``.
@@ -267,7 +267,7 @@ class Kap:
         body = MemberDisclosureQueryBody(
             fromDate=_date_str(start_date),
             toDate=_date_str(end_date),
-            memberOidList=[member_oid],
+            mkkMemberOidList=[member_oid],
             subjectList=subject_oids or [],
         )
         rows = http.post(MEMBER_DISCLOSURE_QUERY_URL, body)
@@ -276,49 +276,58 @@ class Kap:
 
     def fetch_fund_disclosures(
         self,
-        fund: str | Fund,
-        fund_group: FundGroup | str,
         start_date: DateLike,
         end_date: DateLike,
         *,
+        fund_code: str | None = None,
+        fund_group: FundGroup | str | None = None,
         subject_oids: list[str] | None = None,
     ) -> list[Disclosure]:
         """Fetch fund disclosures for the given date range.
 
         Parameters
         ----------
-        fund:
-            :class:`Fund` instance *or* raw fund OID hex string.
-        fund_group:
-            :class:`FundGroup` enum or string (required when *fund* is an OID).
         start_date:
-            Range start (inclusive).
+            Range start (inclusive).  String ``"YYYY-MM-DD"``, ``date``, or
+            ``datetime``.
         end_date:
             Range end (inclusive).
+        fund_code:
+            Optional fund code (e.g. ``"THF"``).  Results are filtered
+            client-side since the API does not support fund-code filtering.
+        fund_group:
+            Optional :class:`FundGroup` enum or string (``"YF"``, ``"EYF"``, …).
+            When provided, restricts results to that fund type.
         subject_oids:
             Optional list of KAP subject OID strings to filter by.
         """
         http = self._require_http()
-
-        group = FundGroup(fund_group) if isinstance(fund_group, str) else fund_group
-        fund_oid = fund.oid if isinstance(fund, Fund) else fund
+        group = (
+            FundGroup(fund_group) if isinstance(fund_group, str) else fund_group
+        )
 
         body = FundDisclosureQueryBody(
             fromDate=_date_str(start_date),
             toDate=_date_str(end_date),
-            fundOidList=[fund_oid],
-            fundTypeList=[group.value],
+            fundOidList=[],
+            fundTypeList=[group.value] if group else [],
             subjectList=subject_oids or [],
         )
         rows = http.post(FUND_DISCLOSURE_QUERY_URL, body)
-        disclosures = [Disclosure.from_row(DisclosureRow.model_validate(r)) for r in rows]
+        disclosures = [
+            Disclosure.from_row(DisclosureRow.model_validate(r)) for r in rows
+        ]
+
+        if fund_code:
+            code_upper = fund_code.upper()
+            disclosures = [d for d in disclosures if d.fund_code.upper() == code_upper]
+
         return sorted(disclosures, key=lambda d: d.publish_datetime, reverse=True)
 
     def fetch_attachments(self, disclosure_index: int) -> list[Attachment]:
         """Return all attachments for the given disclosure index.
 
-        Fetches the HTML detail page at ``/tr/Bildirim/{disclosure_index}`` and
-        parses attachment links.
+        Uses the ``/tr/api/notification/attachment-detail/{index}`` JSON endpoint.
 
         Parameters
         ----------
@@ -326,17 +335,17 @@ class Kap:
             The ``index`` field from a :class:`Disclosure` object.
         """
         http = self._require_http()
-        url = f"{DISCLOSURE_DETAIL_URL}/{disclosure_index}"
-        html = http.get_html(url)
-        raw_links = KapHttpClient.parse_attachment_links(html)
+        url = f"{NOTIFICATION_ATTACHMENT_URL}/{disclosure_index}"
+        raw_list = http.get(url)
 
         attachments: list[Attachment] = []
-        for text, href in raw_links:
-            # Skip navigation / UI links; keep only attachment paths
-            if "/tr/api/" not in href and "/tr/dosya/" not in href:
-                continue
-            full_url = href if href.startswith("http") else f"{BASE_URL}{href}"
-            attachments.append(Attachment(filename=text, url=full_url))
+        for item in raw_list:
+            for att in item.get("attachments") or []:
+                obj_id = att.get("objId", "")
+                file_name = att.get("fileName", "")
+                # PDF/file download URL pattern on KAP
+                att_url = f"{FILE_DOWNLOAD_URL}/{obj_id}" if obj_id else ""
+                attachments.append(Attachment(filename=file_name, url=att_url))
         return attachments
 
     # ------------------------------------------------------------------
@@ -351,22 +360,27 @@ class Kap:
         return self._http
 
     def _load_companies(self) -> None:
-        """Fetch the full KAP member company list and populate caches."""
+        """Fetch KAP member companies by type and populate caches."""
         http = self._require_http()
-        rows = http.get(MEMBER_LIST_URL)
+        # Fetch all member types that list companies
+        member_types = ["HT", "YK", "PYS", "BDK", "DCS", "DDK", "DK", "KVH"]
         self._companies_cache.clear()
         self._companies_by_oid_cache.clear()
-        for raw in rows:
-            row = CompanyRow.model_validate(raw)
-            company = Company.from_row(row)
-            if company.oid:
-                self._companies_by_oid_cache[company.oid] = company
-            # Index by each individual stock code (may be comma-separated)
-            if company.ticker:
-                for code in company.ticker.split(","):
-                    code = code.strip().upper()
-                    if code:
-                        self._companies_cache[code] = company
+        for mtype in member_types:
+            try:
+                rows = http.get(f"{COMPANY_ITEMS_URL}/{mtype}/A")
+            except Exception:
+                continue
+            for raw in rows:
+                row = CompanyRow.model_validate(raw)
+                company = Company.from_row(row)
+                if company.oid:
+                    self._companies_by_oid_cache[company.oid] = company
+                if company.ticker:
+                    for code in company.ticker.split(","):
+                        code = code.strip().upper()
+                        if code:
+                            self._companies_cache[code] = company
 
     @staticmethod
     def _looks_like_oid(value: str) -> bool:

@@ -93,20 +93,24 @@ Constructor:
   - Returns disclosures sorted by publish_datetime, newest first
 
 - kap.fetch_fund_disclosures(
-    fund: Fund | str,
-    fund_group: FundGroup | str,
     start_date: str | date | datetime,
     end_date: str | date | datetime,
     *,
+    fund_code: str | None = None,
+    fund_group: FundGroup | str | None = None,
     subject_oids: list[str] | None = None,
   ) -> list[Disclosure]
-  - fund: Fund instance or raw fund OID hex string
-  - fund_group: required even if Fund object is passed
-  - Returns disclosures sorted newest first
+  - start_date / end_date: MUST be within the same calendar year (cross-year → HTTP 500)
+  - fund_code: short code filter e.g. "THF" (applied client-side)
+  - fund_group: optional group filter e.g. FundGroup.YATIRIM_FONLARI
+  - subject_oids: optional list of FundSubject OID values
+  - Use a year-by-year loop for multi-year searches (see snippet below)
 
 - kap.fetch_attachments(disclosure_index: int) -> list[Attachment]
-  - Fetches the HTML detail page and parses file attachment links
+  - Fetches attachment metadata from the KAP JSON API
   - disclosure_index: the index field from a Disclosure object
+  - Returns Attachment objects with direct download URLs of the form:
+    https://www.kap.org.tr/tr/api/file/download/{objId}
   - Returns empty list if the disclosure has no attachments
 
 ## 5. Data objects returned
@@ -128,8 +132,10 @@ Disclosure:
 - index: int                      (unique KAP disclosure number)
 - publish_datetime: datetime      (publication time)
 - company_name: str
+- fund_code: str                  (short fund code e.g. "THF"; empty for company disclosures)
 - stock_codes: str                (may be empty for non-listed issuers)
 - subject: str                    (disclosure topic)
+- summary: str                    (short summary / teaser; may be empty)
 - disclosure_type: str
 - has_attachment: bool
 - is_late: bool
@@ -152,6 +158,9 @@ FundGroup.YABANCI_YATIRIM_FONLARI        = "YYF"
 FundGroup.VARLIK_FINANSMAN_FONLARI       = "VFF"
 FundGroup.KONUT_FINANSMAN_FONLARI        = "KFF"
 FundGroup.GAYRIMENKUL_YATIRIM_FONLARI    = "GMF"
+FundGroup.GIRISIM_SERMAYESI_FONLARI      = "GSF"
+FundGroup.PROJE_FINANSMAN_FONLARI        = "PFF"
+FundGroup.TASFIYE_EDILEN_YATIRIM_FONLARI = "TEYF"
 ```
 
 String values (e.g. "YF") are accepted everywhere FundGroup is accepted.
@@ -193,22 +202,64 @@ with Kap() as kap:
     print(f"{len(funds)} active YF funds")
 ```
 
-Fetch fund disclosures:
+Fetch fund disclosures (new signature — no Fund object required):
 
 ```python
 from kap_client import Kap, FundGroup
 
 with Kap() as kap:
-    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
-    target = next(f for f in funds if f.code == "AFA")
     disclosures = kap.fetch_fund_disclosures(
-        fund=target,
+        "2024-01-01", "2024-12-31",
         fund_group=FundGroup.YATIRIM_FONLARI,
-        start_date="2024-01-01",
-        end_date="2024-12-31",
+        fund_code="AFA",
     )
     for d in disclosures:
-        print(d.publish_datetime, d.subject)
+        print(d.publish_datetime, d.subject, d.summary)
+```
+
+Fetch fund disclosures across multiple years (year-loop — required by KAP API):
+
+```python
+from datetime import date
+from kap_client import Kap, FundGroup
+from kap_client._endpoints import FundSubject
+
+with Kap() as kap:
+    for year in range(date.today().year, 2019, -1):
+        disclosures = kap.fetch_fund_disclosures(
+            f"{year}-01-01", f"{year}-12-31",
+            fund_group=FundGroup.YATIRIM_FONLARI,
+            fund_code="THF",
+            subject_oids=[FundSubject.PORTFOY_DAGILIM_RAPORU.value],
+        )
+        if disclosures:
+            latest = disclosures[0]
+            attachments = kap.fetch_attachments(latest.index)
+            for a in attachments:
+                print(f"{a.filename}  →  {a.url}")
+            break
+```
+
+Fetch latest izahname (prospectus) for a fund:
+
+```python
+from datetime import date
+from kap_client import Kap, FundGroup
+from kap_client._endpoints import FundSubject
+
+with Kap() as kap:
+    for year in range(date.today().year, 2012, -1):
+        disclosures = kap.fetch_fund_disclosures(
+            f"{year}-01-01", f"{year}-12-31",
+            fund_group=FundGroup.YATIRIM_FONLARI,
+            fund_code="TLY",
+            subject_oids=[FundSubject.IZAHNAME.value],
+        )
+        if disclosures:
+            attachments = kap.fetch_attachments(disclosures[0].index)
+            for a in attachments:
+                print(f"{a.filename}  →  {a.url}")
+            break
 ```
 
 Filter disclosures by subject (using FundSubject OID):
@@ -281,6 +332,7 @@ except KapError as e:
 Operational constraints from KAP:
 - KAP may block datacenter IPs with 403/503 (WAF protection)
 - Rate limiting may apply; client retries 3 times with exponential back-off
+- **`start_date` and `end_date` in `fetch_fund_disclosures` must be within the same calendar year** — cross-year ranges return HTTP 500. Use a year-by-year loop for multi-year searches.
 - Disclosures are returned by the API filtered by the exact date range given
 - OID strings are 32-character hex strings; tickers are short BIST codes
 
@@ -294,9 +346,11 @@ LLM guidance:
 - Pass ticker strings for listed companies, OID strings for non-listed entities
 - Reuse one context manager for all related calls — cache is shared
 - Prefer fetching a wide date range once over multiple narrow requests
-- When using fund disclosures, always pass fund_group even when passing a Fund object
+- **Always keep `start_date` / `end_date` within the same year for `fetch_fund_disclosures`**; use a year loop for multi-year searches
+- For `fetch_fund_disclosures`, pass `fund_code="XXX"` to filter by fund (no Fund object needed)
 - String "YF" / "BYF" etc. are equivalent to FundGroup enum values
-- include_liquidated=True is needed when searching historical data for defunct funds
+- `include_liquidated=True` is needed when searching historical data for defunct funds
+- `TASFIYE_EDILEN_YATIRIM_FONLARI ("TEYF")` is the dedicated group for liquidated YF funds
 
 ## 10. When LLM should propose alternatives
 

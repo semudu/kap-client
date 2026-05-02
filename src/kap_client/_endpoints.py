@@ -19,11 +19,15 @@ from pydantic import BaseModel, field_validator
 BASE_URL = "https://www.kap.org.tr"
 REFERER_URL = f"{BASE_URL}/tr/bildirim-sorgu"
 
-MEMBER_DISCLOSURE_QUERY_URL = f"{BASE_URL}/tr/api/memberDisclosureQuery"
-FUND_DISCLOSURE_QUERY_URL = f"{BASE_URL}/tr/api/fundDisclosureQuery"
-FUND_LIST_URL = f"{BASE_URL}/tr/api/fund"          # + /{group}/{Y|T}
-FUND_MEMBERS_URL = f"{BASE_URL}/tr/api/fundMembers"  # + /{group}
+MEMBER_DISCLOSURE_QUERY_URL = f"{BASE_URL}/tr/api/disclosure/members/byCriteria"
+FUND_DISCLOSURE_QUERY_URL = f"{BASE_URL}/tr/api/disclosure/funds/byCriteria"
 DISCLOSURE_DETAIL_URL = f"{BASE_URL}/tr/Bildirim"  # + /{index}
+
+FUND_LIST_URL = f"{BASE_URL}/tr/api/fund/criteria"         # + /{group}/Y|T
+FUND_MEMBERS_URL = f"{BASE_URL}/tr/api/fund/founder"       # + /{group}
+COMPANY_ITEMS_URL = f"{BASE_URL}/tr/api/company/items"    # + /{memberType}/A|P
+NOTIFICATION_ATTACHMENT_URL = f"{BASE_URL}/tr/api/notification/attachment-detail"  # + /{index}
+FILE_DOWNLOAD_URL = f"{BASE_URL}/tr/api/file/download"  # + /{objId}
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -41,6 +45,9 @@ class FundGroup(str, Enum):
     VARLIK_FINANSMAN_FONLARI = "VFF"
     KONUT_FINANSMAN_FONLARI = "KFF"
     GAYRIMENKUL_YATIRIM_FONLARI = "GMF"
+    GIRISIM_SERMAYESI_FONLARI = "GSF"
+    PROJE_FINANSMAN_FONLARI = "PFF"
+    TASFIYE_EDILEN_YATIRIM_FONLARI = "TEYF"
 
 
 class FundSubject(str, Enum):
@@ -87,26 +94,49 @@ class FundSubject(str, Enum):
 
 
 class MemberDisclosureQueryBody(BaseModel):
-    """Wire-format body for POST /tr/api/memberDisclosureQuery."""
+    """Wire-format body for POST /tr/api/disclosure/members/byCriteria."""
 
     fromDate: str                             # "YYYY-MM-DD"
     toDate: str                               # "YYYY-MM-DD"
-    memberOidList: list[str] = []
+    memberType: str = ""                      # "PYS", "YK", "BDK", ...
+    mkkMemberOidList: list[str] = []
+    inactiveMkkMemberOidList: list[str] = []
+    disclosureClass: str = ""
     subjectList: list[str] = []
-    isLate: bool | None = None                # gecikmiş bildirimler filtresi
-    disclosureClass: str | None = None        # "FR" → finansal raporlar
+    isLate: str = ""
+    mainSector: str = ""
+    sector: str = ""
+    subSector: str = ""
+    marketOid: str = ""
+    index: str = ""
+    bdkReview: str = ""
+    bdkMemberOidList: list[str] = []
+    year: str = ""
+    term: str = ""
+    ruleType: str = ""
+    period: str = ""
+    fromSrc: bool = False
+    srcCategory: str = ""
+    disclosureIndexList: list[int] = []
 
     model_config = {"populate_by_name": True}
 
 
 class FundDisclosureQueryBody(BaseModel):
-    """Wire-format body for POST /tr/api/fundDisclosureQuery."""
+    """Wire-format body for POST /tr/api/disclosure/funds/byCriteria."""
 
     fromDate: str                             # "YYYY-MM-DD"
     toDate: str                               # "YYYY-MM-DD"
-    fundOidList: list[str] = []
     fundTypeList: list[str] = []
+    mkkMemberOidList: list[str] = []
+    fundOidList: list[str] = []
+    passiveFundOidList: list[str] = []
+    disclosureClass: str = ""
+    isLate: str = ""
     subjectList: list[str] = []
+    discIndex: list[int] = []
+    fromSrc: bool = False
+    srcCategory: str = ""
 
     model_config = {"populate_by_name": True}
 
@@ -117,19 +147,31 @@ class FundDisclosureQueryBody(BaseModel):
 
 
 class DisclosureRow(BaseModel):
-    """One row from memberDisclosureQuery or fundDisclosureQuery resultList."""
+    """One row from disclosure/members/byCriteria or disclosure/funds/byCriteria."""
 
     disclosureIndex: int
-    publishDate: str                          # "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
+    publishDate: str                          # "DD.MM.YYYY HH:MM:SS" or ISO
+    # Company disclosures
     memberTitle: str | None = None
-    stockCodes: str | None = None             # "THYAO" or "THYAO,THYAOB" — comma-separated
+    # Fund disclosures
+    fundCode: str | None = None               # "THF", "AFA", …
+    kapTitle: str | None = None               # full fund/company title
+    summary: str | None = None               # bildirim özeti
+    year: int | None = None
+    ruleType: str | None = None              # "11. Ay"
+    period: int | None = None
+    attachmentCount: int | None = None
+    # Common fields
+    stockCodes: str | None = None             # "THYAO" — comma-separated
     subject: str | None = None
     disclosureType: str | None = None         # "FS", "DG", "FR", …
     disclosureClass: str | None = None
+    disclosureCategory: str | None = None
     hasAttachment: bool | None = None
     isLate: bool | None = None
     isCorrective: bool | None = None
     isEnglish: bool | None = None
+    hasMultiLanguageSupport: bool | None = None
 
     model_config = {"extra": "allow", "populate_by_name": True}
 

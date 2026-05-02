@@ -142,21 +142,64 @@ with Kap() as kap:
 
 ### Fund disclosures
 
+> **Note:** The KAP API requires `start_date` and `end_date` to fall within the **same calendar year**. Use a year-by-year loop for multi-year searches.
+
 ```python
 from kap_client import Kap, FundGroup
 
 with Kap() as kap:
-    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
-    target = next(f for f in funds if f.code == "AFA")
-
     disclosures = kap.fetch_fund_disclosures(
-        fund=target,
+        "2024-01-01", "2024-12-31",
         fund_group=FundGroup.YATIRIM_FONLARI,
-        start_date="2024-01-01",
-        end_date="2024-12-31",
+        fund_code="AFA",
     )
     for d in disclosures:
         print(f"[{d.publish_datetime:%Y-%m-%d}] {d.subject}")
+```
+
+### Latest portfolio report (portföy dağılım raporu) for a fund
+
+```python
+from datetime import date
+from kap_client import Kap, FundGroup
+from kap_client._endpoints import FundSubject
+
+with Kap() as kap:
+    for year in range(date.today().year, 2019, -1):
+        disclosures = kap.fetch_fund_disclosures(
+            f"{year}-01-01", f"{year}-12-31",
+            fund_group=FundGroup.YATIRIM_FONLARI,
+            fund_code="THF",
+            subject_oids=[FundSubject.PORTFOY_DAGILIM_RAPORU.value],
+        )
+        if disclosures:
+            latest = disclosures[0]
+            attachments = kap.fetch_attachments(latest.index)
+            for a in attachments:
+                print(f"{a.filename}  →  {a.url}")
+            break
+```
+
+### Latest izahname (prospectus) for a fund
+
+```python
+from datetime import date
+from kap_client import Kap, FundGroup
+from kap_client._endpoints import FundSubject
+
+with Kap() as kap:
+    for year in range(date.today().year, 2012, -1):
+        disclosures = kap.fetch_fund_disclosures(
+            f"{year}-01-01", f"{year}-12-31",
+            fund_group=FundGroup.YATIRIM_FONLARI,
+            fund_code="TLY",
+            subject_oids=[FundSubject.IZAHNAME.value],
+        )
+        if disclosures:
+            attachments = kap.fetch_attachments(disclosures[0].index)
+            for a in attachments:
+                print(f"{a.filename}  →  {a.url}")
+            break
 ```
 
 ### Filter by subject using FundSubject
@@ -319,23 +362,36 @@ with Kap() as kap:
 
 ---
 
-### `Kap.fetch_fund_disclosures(fund, fund_group, start_date, end_date, *, subject_oids=None) -> list[Disclosure]`
+### `Kap.fetch_fund_disclosures(start_date, end_date, *, fund_code=None, fund_group=None, subject_oids=None) -> list[Disclosure]`
 
 Fetch fund disclosures for a date range. Returns results sorted newest first.
 
+> **Constraint:** `start_date` and `end_date` must fall within the **same calendar year**. Cross-year ranges return HTTP 500. Use a year loop for multi-year searches.
+
+```python
+with Kap() as kap:
+    disclosures = kap.fetch_fund_disclosures(
+        "2024-01-01", "2024-12-31",
+        fund_group=FundGroup.YATIRIM_FONLARI,
+        fund_code="THF",
+    )
+```
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `fund` | `Fund \| str` | — | `Fund` instance or raw fund OID hex string |
-| `fund_group` | `FundGroup \| str` | — | Required even when passing a `Fund` object |
-| `start_date` | `str \| date \| datetime` | — | Range start, inclusive |
-| `end_date` | `str \| date \| datetime` | — | Range end, inclusive |
-| `subject_oids` | `list[str] \| None` | `None` | Optional subject filter |
+| `start_date` | `str \| date \| datetime` | — | Range start, inclusive (`"YYYY-MM-DD"`) |
+| `end_date` | `str \| date \| datetime` | — | Range end, inclusive (must be same year as start) |
+| `fund_code` | `str \| None` | `None` | Short fund code filter, e.g. `"THF"` (client-side) |
+| `fund_group` | `FundGroup \| str \| None` | `None` | Fund group filter, e.g. `FundGroup.YATIRIM_FONLARI` |
+| `subject_oids` | `list[str] \| None` | `None` | Optional `FundSubject` OID values |
 
 ---
 
 ### `Kap.fetch_attachments(disclosure_index: int) -> list[Attachment]`
 
-Fetches the HTML detail page for a disclosure and parses all file attachment links. Returns an empty list if the disclosure has no attachments.
+Fetches attachment metadata for a disclosure via the KAP JSON API and returns direct download URLs. Returns an empty list if the disclosure has no attachments.
+
+Download URLs have the form `https://www.kap.org.tr/tr/api/file/download/{objId}`.
 
 ```python
 with Kap() as kap:
@@ -357,8 +413,10 @@ with Kap() as kap:
 | `index` | `int` | Unique KAP disclosure number |
 | `publish_datetime` | `datetime` | Publication timestamp |
 | `company_name` | `str` | Issuer name |
+| `fund_code` | `str` | Short fund code (e.g. `"THF"`); empty for company disclosures |
 | `stock_codes` | `str` | BIST ticker(s); empty for non-listed issuers |
 | `subject` | `str` | Disclosure topic |
+| `summary` | `str` | Short summary / teaser text; may be empty |
 | `disclosure_type` | `str` | Type classification |
 | `has_attachment` | `bool` | Whether file attachments are available |
 | `is_late` | `bool` | Filed after deadline |
@@ -406,6 +464,9 @@ with Kap() as kap:
 | `FundGroup.VARLIK_FINANSMAN_FONLARI` | `"VFF"` — Varlık Finansman Fonları |
 | `FundGroup.KONUT_FINANSMAN_FONLARI` | `"KFF"` — Konut Finansman Fonları |
 | `FundGroup.GAYRIMENKUL_YATIRIM_FONLARI` | `"GMF"` — Gayrimenkul Yatırım Fonları |
+| `FundGroup.GIRISIM_SERMAYESI_FONLARI` | `"GSF"` — Girişim Sermayesi Fonları |
+| `FundGroup.PROJE_FINANSMAN_FONLARI` | `"PFF"` — Proje Finansman Fonları |
+| `FundGroup.TASFIYE_EDILEN_YATIRIM_FONLARI` | `"TEYF"` — Tasfiye Edilen Yatırım Fonları |
 
 String values (e.g. `"YF"`) are accepted everywhere a `FundGroup` is expected.
 

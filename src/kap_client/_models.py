@@ -143,8 +143,10 @@ class Disclosure(BaseModel, frozen=True):
     index: int
     publish_datetime: datetime
     company_name: str
+    fund_code: str
     stock_codes: str
     subject: str
+    summary: str
     disclosure_type: str
     has_attachment: bool
     is_late: bool
@@ -160,14 +162,25 @@ class Disclosure(BaseModel, frozen=True):
         except ValueError:
             pub_dt = datetime.min
 
+        # New API uses kapTitle for funds, memberTitle for companies
+        name = row.kapTitle or row.memberTitle or ""
+        # has_attachment: new API uses attachmentCount, old uses hasAttachment
+        has_att = (
+            row.hasAttachment
+            if row.hasAttachment is not None
+            else (row.attachmentCount or 0) > 0
+        )
+
         return cls(
             index=row.disclosureIndex,
             publish_datetime=pub_dt,
-            company_name=row.memberTitle or "",
+            company_name=name,
+            fund_code=row.fundCode or "",
             stock_codes=row.stockCodes or "",
             subject=row.subject or "",
+            summary=(row.summary or "").strip(),
             disclosure_type=row.disclosureType or "",
-            has_attachment=row.hasAttachment if row.hasAttachment is not None else False,
+            has_attachment=has_att,
             is_late=row.isLate if row.isLate is not None else False,
             is_corrective=row.isCorrective if row.isCorrective is not None else False,
             is_english=row.isEnglish if row.isEnglish is not None else False,
