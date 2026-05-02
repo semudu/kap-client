@@ -198,9 +198,7 @@ class KapHttpClient:
             return result
 
         if last_exc is not None:
-            raise KapError(
-                f"KAP request failed after {_MAX_RETRIES} attempts"
-            ) from last_exc
+            raise KapError(f"KAP request failed after {_MAX_RETRIES} attempts") from last_exc
         raise KapError(f"KAP request failed after {_MAX_RETRIES} attempts")
 
     def get(
@@ -293,9 +291,7 @@ class KapHttpClient:
                 raise RateLimitError(retry_after)
 
             if response.status_code != 200:
-                raise KapError(
-                    f"KAP returned HTTP {response.status_code} for {url}"
-                )
+                raise KapError(f"KAP returned HTTP {response.status_code} for {url}")
 
             return response.text
 

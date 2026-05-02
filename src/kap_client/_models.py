@@ -166,9 +166,7 @@ class Disclosure(BaseModel, frozen=True):
         name = row.kapTitle or row.memberTitle or ""
         # has_attachment: new API uses attachmentCount, old uses hasAttachment
         has_att = (
-            row.hasAttachment
-            if row.hasAttachment is not None
-            else (row.attachmentCount or 0) > 0
+            row.hasAttachment if row.hasAttachment is not None else (row.attachmentCount or 0) > 0
         )
 
         return cls(

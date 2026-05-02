@@ -87,9 +87,7 @@ def test_find_company_not_found(httpx_mock: HTTPXMock, company_list_json: list) 
 
 
 def test_fetch_funds_active(httpx_mock: HTTPXMock, fund_list_json: list) -> None:
-    httpx_mock.add_response(
-        method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json
-    )
+    httpx_mock.add_response(method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json)
     with Kap() as kap:
         funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
     assert len(funds) == len(fund_list_json)
@@ -97,9 +95,7 @@ def test_fetch_funds_active(httpx_mock: HTTPXMock, fund_list_json: list) -> None
 
 
 def test_fetch_funds_cached(httpx_mock: HTTPXMock, fund_list_json: list) -> None:
-    httpx_mock.add_response(
-        method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json
-    )
+    httpx_mock.add_response(method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json)
     with Kap() as kap:
         kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
         funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)  # from cache
@@ -107,22 +103,16 @@ def test_fetch_funds_cached(httpx_mock: HTTPXMock, fund_list_json: list) -> None
 
 
 def test_fetch_funds_include_liquidated(httpx_mock: HTTPXMock, fund_list_json: list) -> None:
-    httpx_mock.add_response(
-        method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json
-    )
+    httpx_mock.add_response(method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json)
     liq_fund = [{**fund_list_json[0], "fundCode": "ZZZ", "isActive": False}]
-    httpx_mock.add_response(
-        method="GET", url=f"{FUND_LIST_URL}/YF/T", json=liq_fund
-    )
+    httpx_mock.add_response(method="GET", url=f"{FUND_LIST_URL}/YF/T", json=liq_fund)
     with Kap() as kap:
         funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI, include_liquidated=True)
     assert len(funds) == len(fund_list_json) + 1
 
 
 def test_fetch_funds_string_group(httpx_mock: HTTPXMock, fund_list_json: list) -> None:
-    httpx_mock.add_response(
-        method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json
-    )
+    httpx_mock.add_response(method="GET", url=f"{FUND_LIST_URL}/YF/Y", json=fund_list_json)
     with Kap() as kap:
         funds = kap.fetch_funds("YF")
     assert len(funds) > 0
@@ -134,9 +124,7 @@ def test_fetch_funds_string_group(httpx_mock: HTTPXMock, fund_list_json: list) -
 
 
 def test_fetch_fund_members(httpx_mock: HTTPXMock, company_list_json: list) -> None:
-    httpx_mock.add_response(
-        method="GET", url=f"{FUND_MEMBERS_URL}/YF", json=company_list_json
-    )
+    httpx_mock.add_response(method="GET", url=f"{FUND_MEMBERS_URL}/YF", json=company_list_json)
     with Kap() as kap:
         members = kap.fetch_fund_members(FundGroup.YATIRIM_FONLARI)
     assert len(members) > 0
@@ -163,9 +151,7 @@ def test_fetch_disclosures_by_ticker(
     assert dates == sorted(dates, reverse=True)
 
 
-def test_fetch_disclosures_by_oid(
-    httpx_mock: HTTPXMock, company_disclosures_json: list
-) -> None:
+def test_fetch_disclosures_by_oid(httpx_mock: HTTPXMock, company_disclosures_json: list) -> None:
     """If an OID is passed directly, no company lookup should occur."""
     oid = "4028e4a252438b3301524396b9510024"
     httpx_mock.add_response(
@@ -176,13 +162,9 @@ def test_fetch_disclosures_by_oid(
     assert len(disclosures) == len(company_disclosures_json)
 
 
-def test_fetch_disclosures_empty(
-    httpx_mock: HTTPXMock, company_list_json: list
-) -> None:
+def test_fetch_disclosures_empty(httpx_mock: HTTPXMock, company_list_json: list) -> None:
     httpx_mock.add_response(method="GET", url=COMPANY_HT_URL, json=company_list_json)
-    httpx_mock.add_response(
-        method="POST", url=MEMBER_DISCLOSURE_QUERY_URL, json=[]
-    )
+    httpx_mock.add_response(method="POST", url=MEMBER_DISCLOSURE_QUERY_URL, json=[])
     with Kap() as kap:
         disclosures = kap.fetch_disclosures("THYAO", "2024-01-01", "2024-01-02")
     assert disclosures == []
@@ -193,9 +175,7 @@ def test_fetch_disclosures_empty(
 # ---------------------------------------------------------------------------
 
 
-def test_fetch_fund_disclosures(
-    httpx_mock: HTTPXMock, fund_disclosures_json: list
-) -> None:
+def test_fetch_fund_disclosures(httpx_mock: HTTPXMock, fund_disclosures_json: list) -> None:
     httpx_mock.add_response(
         method="POST", url=FUND_DISCLOSURE_QUERY_URL, json=fund_disclosures_json
     )
@@ -237,9 +217,7 @@ def test_fetch_fund_disclosures_fund_code_filter(
             "kapTitle": "HALK PORTFÖY TEMATİK FONU",
         }
     ]
-    httpx_mock.add_response(
-        method="POST", url=FUND_DISCLOSURE_QUERY_URL, json=mixed
-    )
+    httpx_mock.add_response(method="POST", url=FUND_DISCLOSURE_QUERY_URL, json=mixed)
     with Kap() as kap:
         disclosures = kap.fetch_fund_disclosures(
             "2024-01-01",
@@ -290,9 +268,7 @@ def test_fetch_fund_disclosures_subject_filter(
 # ---------------------------------------------------------------------------
 
 
-def test_fetch_attachments(
-    httpx_mock: HTTPXMock, attachment_json: list
-) -> None:
+def test_fetch_attachments(httpx_mock: HTTPXMock, attachment_json: list) -> None:
     """fetch_attachments uses the JSON attachment-detail endpoint."""
     httpx_mock.add_response(
         method="GET",

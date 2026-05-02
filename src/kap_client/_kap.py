@@ -187,9 +187,7 @@ class Kap:
 
         if include_liquidated:
             liq_rows = http.get(f"{FUND_LIST_URL}/{group.value}/T")
-            funds += [
-                Fund.from_row(FundRow.model_validate(r), group) for r in liq_rows
-            ]
+            funds += [Fund.from_row(FundRow.model_validate(r), group) for r in liq_rows]
 
         self._funds_cache[cache_key] = funds
         return funds
@@ -301,9 +299,7 @@ class Kap:
             Optional list of KAP subject OID strings to filter by.
         """
         http = self._require_http()
-        group = (
-            FundGroup(fund_group) if isinstance(fund_group, str) else fund_group
-        )
+        group = FundGroup(fund_group) if isinstance(fund_group, str) else fund_group
 
         body = FundDisclosureQueryBody(
             fromDate=_date_str(start_date),
@@ -313,9 +309,7 @@ class Kap:
             subjectList=subject_oids or [],
         )
         rows = http.post(FUND_DISCLOSURE_QUERY_URL, body)
-        disclosures = [
-            Disclosure.from_row(DisclosureRow.model_validate(r)) for r in rows
-        ]
+        disclosures = [Disclosure.from_row(DisclosureRow.model_validate(r)) for r in rows]
 
         if fund_code:
             code_upper = fund_code.upper()
@@ -353,9 +347,7 @@ class Kap:
 
     def _require_http(self) -> KapHttpClient:
         if self._http is None:
-            raise RuntimeError(
-                "Kap must be used as a context manager: `with Kap() as kap: ...`"
-            )
+            raise RuntimeError("Kap must be used as a context manager: `with Kap() as kap: ...`")
         return self._http
 
     def _load_companies(self) -> None:

@@ -18,7 +18,9 @@ import kap_client._client as _kap_client_module
 @pytest.fixture(autouse=True)
 def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patch time.sleep inside _client.py to a no-op so retry back-offs are instant."""
-    monkeypatch.setattr(_kap_client_module, "time", type("_T", (), {"sleep": staticmethod(lambda s: None)})())
+    monkeypatch.setattr(
+        _kap_client_module, "time", type("_T", (), {"sleep": staticmethod(lambda s: None)})()
+    )
 
 
 @pytest.fixture
@@ -45,14 +47,24 @@ def httpx_mock(
     real_handle = httpx.HTTPTransport.handle_request
 
     def mocked_handle(transport: httpx.HTTPTransport, req: httpx.Request) -> httpx.Response:
-        return mock._handle_request(transport, req) if opts.should_mock(req) else real_handle(transport, req)
+        return (
+            mock._handle_request(transport, req)
+            if opts.should_mock(req)
+            else real_handle(transport, req)
+        )
 
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", mocked_handle)
 
     real_async = httpx.AsyncHTTPTransport.handle_async_request
 
-    async def mocked_async(transport: httpx.AsyncHTTPTransport, req: httpx.Request) -> httpx.Response:
-        return await mock._handle_async_request(transport, req) if opts.should_mock(req) else await real_async(transport, req)
+    async def mocked_async(
+        transport: httpx.AsyncHTTPTransport, req: httpx.Request
+    ) -> httpx.Response:
+        return (
+            await mock._handle_async_request(transport, req)
+            if opts.should_mock(req)
+            else await real_async(transport, req)
+        )
 
     monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", mocked_async)
 
@@ -61,6 +73,7 @@ def httpx_mock(
         mock._assert_options()
     finally:
         mock.reset()
+
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

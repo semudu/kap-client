@@ -23,9 +23,9 @@ MEMBER_DISCLOSURE_QUERY_URL = f"{BASE_URL}/tr/api/disclosure/members/byCriteria"
 FUND_DISCLOSURE_QUERY_URL = f"{BASE_URL}/tr/api/disclosure/funds/byCriteria"
 DISCLOSURE_DETAIL_URL = f"{BASE_URL}/tr/Bildirim"  # + /{index}
 
-FUND_LIST_URL = f"{BASE_URL}/tr/api/fund/criteria"         # + /{group}/Y|T
-FUND_MEMBERS_URL = f"{BASE_URL}/tr/api/fund/founder"       # + /{group}
-COMPANY_ITEMS_URL = f"{BASE_URL}/tr/api/company/items"    # + /{memberType}/A|P
+FUND_LIST_URL = f"{BASE_URL}/tr/api/fund/criteria"  # + /{group}/Y|T
+FUND_MEMBERS_URL = f"{BASE_URL}/tr/api/fund/founder"  # + /{group}
+COMPANY_ITEMS_URL = f"{BASE_URL}/tr/api/company/items"  # + /{memberType}/A|P
 NOTIFICATION_ATTACHMENT_URL = f"{BASE_URL}/tr/api/notification/attachment-detail"  # + /{index}
 FILE_DOWNLOAD_URL = f"{BASE_URL}/tr/api/file/download"  # + /{objId}
 
@@ -96,9 +96,9 @@ class FundSubject(str, Enum):
 class MemberDisclosureQueryBody(BaseModel):
     """Wire-format body for POST /tr/api/disclosure/members/byCriteria."""
 
-    fromDate: str                             # "YYYY-MM-DD"
-    toDate: str                               # "YYYY-MM-DD"
-    memberType: str = ""                      # "PYS", "YK", "BDK", ...
+    fromDate: str  # "YYYY-MM-DD"
+    toDate: str  # "YYYY-MM-DD"
+    memberType: str = ""  # "PYS", "YK", "BDK", ...
     mkkMemberOidList: list[str] = []
     inactiveMkkMemberOidList: list[str] = []
     disclosureClass: str = ""
@@ -125,8 +125,8 @@ class MemberDisclosureQueryBody(BaseModel):
 class FundDisclosureQueryBody(BaseModel):
     """Wire-format body for POST /tr/api/disclosure/funds/byCriteria."""
 
-    fromDate: str                             # "YYYY-MM-DD"
-    toDate: str                               # "YYYY-MM-DD"
+    fromDate: str  # "YYYY-MM-DD"
+    toDate: str  # "YYYY-MM-DD"
     fundTypeList: list[str] = []
     mkkMemberOidList: list[str] = []
     fundOidList: list[str] = []
@@ -150,21 +150,21 @@ class DisclosureRow(BaseModel):
     """One row from disclosure/members/byCriteria or disclosure/funds/byCriteria."""
 
     disclosureIndex: int
-    publishDate: str                          # "DD.MM.YYYY HH:MM:SS" or ISO
+    publishDate: str  # "DD.MM.YYYY HH:MM:SS" or ISO
     # Company disclosures
     memberTitle: str | None = None
     # Fund disclosures
-    fundCode: str | None = None               # "THF", "AFA", …
-    kapTitle: str | None = None               # full fund/company title
-    summary: str | None = None               # bildirim özeti
+    fundCode: str | None = None  # "THF", "AFA", …
+    kapTitle: str | None = None  # full fund/company title
+    summary: str | None = None  # bildirim özeti
     year: int | None = None
-    ruleType: str | None = None              # "11. Ay"
+    ruleType: str | None = None  # "11. Ay"
     period: int | None = None
     attachmentCount: int | None = None
     # Common fields
-    stockCodes: str | None = None             # "THYAO" — comma-separated
+    stockCodes: str | None = None  # "THYAO" — comma-separated
     subject: str | None = None
-    disclosureType: str | None = None         # "FS", "DG", "FR", …
+    disclosureType: str | None = None  # "FS", "DG", "FR", …
     disclosureClass: str | None = None
     disclosureCategory: str | None = None
     hasAttachment: bool | None = None
