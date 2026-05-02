@@ -16,7 +16,8 @@ Fetch company and fund disclosures, browse investment fund lists, and download d
 
 - **📢 Company disclosures** — search by BIST ticker or KAP OID, with optional subject filtering
 - **📋 Fund disclosures** — search across all KAP fund groups (YF, BYF, EYF, OKS, GMF, …)
-- **🏢 Company & fund lists** — fully enumerated and cached per session
+- **� Per-fund filter endpoint** — `fetch_fund_disclosures_by_filter` queries a single fund by KAP OID, no calendar-year limit, server-side filtering
+- **�🏢 Company & fund lists** — fully enumerated and cached per session
 - **📎 Attachment parsing** — automatically extracts file links from disclosure HTML pages
 - **🔎 Subject filtering** — narrow results using `FundSubject` OID constants
 - **⏱️ Retry & back-off** — 3 attempts with exponential back-off; `RateLimitError` on 429
@@ -157,7 +158,48 @@ with Kap() as kap:
         print(f"[{d.publish_datetime:%Y-%m-%d}] {d.subject}")
 ```
 
-### Latest portfolio report (portföy dağılım raporu) for a fund
+### Latest portfolio report via per-fund filter endpoint (no date-range limit)
+
+Use `fetch_fund_disclosures_by_filter` when you know the fund's KAP OID. This endpoint has **no same-year constraint** and filters server-side — much faster for large date ranges.
+
+```python
+from kap_client import Kap, FundSubject
+
+# Fund OID is the `oid` field from a Fund object returned by fetch_funds()
+THF_OID = "4028328c950ba8c70195140f682921da"
+
+with Kap() as kap:
+    disclosures = kap.fetch_fund_disclosures_by_filter(
+        fund_oid=THF_OID,
+        subject_oid=FundSubject.PORTFOY_DAGILIM_RAPORU.value,
+        days=365,
+    )
+    if disclosures:
+        latest = disclosures[0]  # sorted newest first
+        attachments = kap.fetch_attachments(latest.index)
+        for a in attachments:
+            print(f"{a.filename}  →  {a.url}")
+```
+
+To look up a fund's OID dynamically:
+
+```python
+from kap_client import Kap, FundGroup, FundSubject
+
+with Kap() as kap:
+    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
+    fund = next(f for f in funds if f.code == "THF")
+
+    disclosures = kap.fetch_fund_disclosures_by_filter(
+        fund_oid=fund.oid,
+        subject_oid=FundSubject.PORTFOY_DAGILIM_RAPORU.value,
+        days=365,
+    )
+    for d in disclosures:
+        print(f"[{d.publish_datetime:%Y-%m-%d}] {d.subject}")
+```
+
+### Latest portfolio report (portföy dağılım raporu) via byCriteria endpoint
 
 ```python
 from datetime import date
@@ -384,6 +426,32 @@ with Kap() as kap:
 | `fund_code` | `str \| None` | `None` | Short fund code filter, e.g. `"THF"` (client-side) |
 | `fund_group` | `FundGroup \| str \| None` | `None` | Fund group filter, e.g. `FundGroup.YATIRIM_FONLARI` |
 | `subject_oids` | `list[str] \| None` | `None` | Optional `FundSubject` OID values |
+
+---
+
+### `Kap.fetch_fund_disclosures_by_filter(fund_oid, subject_oid, days=365) -> list[Disclosure]`
+
+Fetch disclosures for a **single fund** using the KAP per-fund filter endpoint (`GET /tr/api/disclosure/filter/FILTERYFBF/{fund_oid}/{subject_oid}/{days}`). Results are sorted newest first.
+
+**Key advantage:** unlike `fetch_fund_disclosures`, this endpoint has **no calendar-year constraint** and filtering is done server-side, making it faster and more reliable for large date ranges.
+
+```python
+with Kap() as kap:
+    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
+    fund = next(f for f in funds if f.code == "TLY")
+
+    disclosures = kap.fetch_fund_disclosures_by_filter(
+        fund_oid=fund.oid,
+        subject_oid=FundSubject.IZAHNAME.value,
+        days=730,
+    )
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fund_oid` | `str` | — | KAP fund OID (32-char hex, from `Fund.oid`) |
+| `subject_oid` | `str` | — | `FundSubject` OID value (use `FundSubject.XXX.value`) |
+| `days` | `int` | `365` | Look-back window in days; no upper limit enforced by the API |
 
 ---
 

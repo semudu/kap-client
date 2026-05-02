@@ -28,6 +28,10 @@ FUND_MEMBERS_URL = f"{BASE_URL}/tr/api/fund/founder"  # + /{group}
 COMPANY_ITEMS_URL = f"{BASE_URL}/tr/api/company/items"  # + /{memberType}/A|P
 NOTIFICATION_ATTACHMENT_URL = f"{BASE_URL}/tr/api/notification/attachment-detail"  # + /{index}
 FILE_DOWNLOAD_URL = f"{BASE_URL}/tr/api/file/download"  # + /{objId}
+# Fund-specific filter endpoint (no date-range limit): GET /FILTERYFBF/{fund_oid}/{subject_oid}/{days}
+FUND_DISCLOSURE_FILTER_URL = f"{BASE_URL}/tr/api/disclosure/filter/FILTERYFBF"
+# Fund-specific filter endpoint: GET /filter/FILTERYFBF/{fund_oid}/{subject_oid}/{days}
+FUND_DISCLOSURE_FILTER_URL = f"{BASE_URL}/tr/api/disclosure/filter/FILTERYFBF"
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -224,3 +228,22 @@ class FundRow(BaseModel):
         if isinstance(v, str):
             return v.strip().upper() in {"TRUE", "1", "EVET", "Y", "ACTIVE"}
         return bool(v)
+
+
+class FilterDisclosureBasic(BaseModel):
+    """``disclosureBasic`` object from GET /tr/api/disclosure/filter/FILTERYFBF/…"""
+
+    disclosureIndex: int
+    publishDate: str  # "DD.MM.YYYY HH:MM:SS"
+    stockCode: str | None = None
+    companyTitle: str | None = None
+    title: str | None = None
+    summary: str | None = None
+    disclosureType: str | None = None
+    disclosureClass: str | None = None
+    disclosureCategory: str | None = None
+    attachmentCount: int | None = None
+    year: int | None = None
+    isLate: bool | None = None
+
+    model_config = {"extra": "allow", "populate_by_name": True}

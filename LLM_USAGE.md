@@ -40,6 +40,7 @@ Pattern:
    - kap.fetch_fund_members(...)       -> list[Company]
    - kap.fetch_disclosures(...)        -> list[Disclosure]
    - kap.fetch_fund_disclosures(...)   -> list[Disclosure]
+   - kap.fetch_fund_disclosures_by_filter(fund_oid, subject_oid, days=365) -> list[Disclosure]
    - kap.fetch_attachments(index)      -> list[Attachment]
 3. All returned objects are frozen Pydantic models
 
@@ -105,6 +106,19 @@ Constructor:
   - fund_group: optional group filter e.g. FundGroup.YATIRIM_FONLARI
   - subject_oids: optional list of FundSubject OID values
   - Use a year-by-year loop for multi-year searches (see snippet below)
+
+- kap.fetch_fund_disclosures_by_filter(
+    fund_oid: str,
+    subject_oid: str,
+    days: int = 365,
+  ) -> list[Disclosure]
+  - Preferred alternative to fetch_fund_disclosures when the fund OID is known
+  - Uses GET /tr/api/disclosure/filter/FILTERYFBF/{fund_oid}/{subject_oid}/{days}
+  - NO same-calendar-year constraint; filtering is server-side
+  - fund_oid: 32-character hex string from Fund.oid (obtained via fetch_funds())
+  - subject_oid: FundSubject OID value (e.g. FundSubject.PORTFOY_DAGILIM_RAPORU.value)
+  - days: look-back window, default 365; no API-enforced upper limit
+  - Returns disclosures sorted by publish_datetime, newest first
 
 - kap.fetch_attachments(disclosure_index: int) -> list[Attachment]
   - Fetches attachment metadata from the KAP JSON API
@@ -240,6 +254,28 @@ with Kap() as kap:
             break
 ```
 
+Fetch fund disclosures via per-fund filter endpoint (preferred — no year constraint, server-side filter):
+
+```python
+from kap_client import Kap, FundGroup, FundSubject
+
+with Kap() as kap:
+    # Get fund OID once from the fund list
+    funds = kap.fetch_funds(FundGroup.YATIRIM_FONLARI)
+    fund = next(f for f in funds if f.code == "THF")
+
+    disclosures = kap.fetch_fund_disclosures_by_filter(
+        fund_oid=fund.oid,
+        subject_oid=FundSubject.PORTFOY_DAGILIM_RAPORU.value,
+        days=365,
+    )
+    if disclosures:
+        latest = disclosures[0]  # sorted newest first
+        attachments = kap.fetch_attachments(latest.index)
+        for a in attachments:
+            print(f"{a.filename}  →  {a.url}")
+```
+
 Fetch latest izahname (prospectus) for a fund:
 
 ```python
@@ -333,6 +369,7 @@ Operational constraints from KAP:
 - KAP may block datacenter IPs with 403/503 (WAF protection)
 - Rate limiting may apply; client retries 3 times with exponential back-off
 - **`start_date` and `end_date` in `fetch_fund_disclosures` must be within the same calendar year** — cross-year ranges return HTTP 500. Use a year-by-year loop for multi-year searches.
+- `fetch_fund_disclosures_by_filter` does **not** have this constraint; use it when fund OID is available.
 - Disclosures are returned by the API filtered by the exact date range given
 - OID strings are 32-character hex strings; tickers are short BIST codes
 

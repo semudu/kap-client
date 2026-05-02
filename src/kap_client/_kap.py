@@ -19,6 +19,7 @@ from ._client import KapHttpClient
 from ._endpoints import (
     COMPANY_ITEMS_URL,
     FILE_DOWNLOAD_URL,
+    FUND_DISCLOSURE_FILTER_URL,
     FUND_DISCLOSURE_QUERY_URL,
     FUND_LIST_URL,
     FUND_MEMBERS_URL,
@@ -26,6 +27,7 @@ from ._endpoints import (
     NOTIFICATION_ATTACHMENT_URL,
     CompanyRow,
     DisclosureRow,
+    FilterDisclosureBasic,
     FundDisclosureQueryBody,
     FundGroup,
     FundRow,
@@ -315,6 +317,58 @@ class Kap:
             code_upper = fund_code.upper()
             disclosures = [d for d in disclosures if d.fund_code.upper() == code_upper]
 
+        return sorted(disclosures, key=lambda d: d.publish_datetime, reverse=True)
+
+    def fetch_fund_disclosures_by_filter(
+        self,
+        fund_oid: str,
+        subject_oid: str,
+        days: int = 365,
+    ) -> list[Disclosure]:
+        """Fetch fund disclosures using the per-fund filter endpoint.
+
+        Unlike ``fetch_fund_disclosures`` (which uses the ``byCriteria`` POST
+        endpoint and fails for date ranges > ~90 days), this method uses the
+        ``GET /tr/api/disclosure/filter/FILTERYFBF/{fund_oid}/{subject_oid}/{days}``
+        endpoint that KAP's own fund-detail page uses.  It has no date-range
+        limit and returns only disclosures for the specific fund.
+
+        Parameters
+        ----------
+        fund_oid:
+            The KAP hex OID of the fund (available as ``Fund.oid``).
+        subject_oid:
+            A :class:`FundSubject` enum value (its string value is the OID).
+        days:
+            How many calendar days back to search.  KAP typically returns at
+            most one year of history; values up to 365 work reliably.
+        """
+        http = self._require_http()
+        url = f"{FUND_DISCLOSURE_FILTER_URL}/{fund_oid}/{subject_oid}/{days}"
+        rows = http.get(url)
+        disclosures: list[Disclosure] = []
+        for item in rows:
+            basic_raw = item.get("disclosureBasic") if isinstance(item, dict) else None
+            if not basic_raw:
+                continue
+            basic = FilterDisclosureBasic.model_validate(basic_raw)
+            # Re-use the existing Disclosure.from_row path via a DisclosureRow adapter
+            row = DisclosureRow(
+                disclosureIndex=basic.disclosureIndex,
+                publishDate=basic.publishDate,
+                fundCode=basic.stockCode,
+                kapTitle=basic.companyTitle,
+                subject=basic.title,
+                summary=basic.summary,
+                disclosureType=basic.disclosureType,
+                disclosureClass=basic.disclosureClass,
+                disclosureCategory=basic.disclosureCategory,
+                attachmentCount=basic.attachmentCount,
+                year=basic.year,
+                isLate=basic.isLate,
+                hasAttachment=(basic.attachmentCount or 0) > 0,
+            )
+            disclosures.append(Disclosure.from_row(row))
         return sorted(disclosures, key=lambda d: d.publish_datetime, reverse=True)
 
     def fetch_attachments(self, disclosure_index: int) -> list[Attachment]:
