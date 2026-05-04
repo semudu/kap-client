@@ -10,6 +10,7 @@ Wraps ``httpx.Client`` with:
 from __future__ import annotations
 
 import logging
+import random
 import time
 from html.parser import HTMLParser
 from typing import Any, cast
@@ -24,6 +25,8 @@ logger = logging.getLogger(__name__)
 _DEFAULT_TIMEOUT = 30.0
 _MAX_RETRIES = 3
 _BACKOFF_BASE = 2.0  # seconds; delay = base ** attempt
+_REQUEST_JITTER = (0.3, 0.8)  # seconds; random delay before each request to avoid rate limiting
+_jitter_range: tuple[float, float] = _REQUEST_JITTER  # patchable in tests
 
 _DEFAULT_HEADERS: dict[str, str] = {
     "Origin": BASE_URL,
@@ -150,6 +153,8 @@ class KapHttpClient:
 
         payload = body.model_dump() if hasattr(body, "model_dump") else body
         last_exc: Exception | None = None
+
+        time.sleep(random.uniform(*_jitter_range))
 
         for attempt in range(_MAX_RETRIES):
             try:
