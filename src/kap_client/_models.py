@@ -90,6 +90,8 @@ class Fund(BaseModel, frozen=True):
         :class:`FundGroup` enum value (``BYF``, ``YF``, …).
     is_active:
         ``True`` if the fund is currently active (not liquidated).
+    permalink:
+        The fund's KAP permalink slug.
     """
 
     oid: str
@@ -98,6 +100,7 @@ class Fund(BaseModel, frozen=True):
     fund_type: str
     fund_group: FundGroup
     is_active: bool
+    permalink: str
 
     @classmethod
     def from_row(cls, row: FundRow, fund_group: FundGroup) -> Fund:
@@ -108,6 +111,7 @@ class Fund(BaseModel, frozen=True):
             fund_type=row.fundType or "",
             fund_group=fund_group,
             is_active=row.isActive if row.isActive is not None else True,
+            permalink=row.fundPermaLink or "",
         )
 
 

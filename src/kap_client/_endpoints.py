@@ -10,7 +10,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # URL constants
@@ -211,10 +211,11 @@ class FundRow(BaseModel):
     """One row from /tr/api/fund/{group}/{status}."""
 
     fundCode: str | None = None
-    fundTitle: str | None = None
-    oid: str | None = None
+    fundTitle: str | None = Field(default=None, alias="fundName")
+    oid: str | None = Field(default=None, alias="fundOid")
     fundType: str | None = None
     isActive: bool | None = None
+    fundPermaLink: str | None = None
 
     model_config = {"extra": "allow", "populate_by_name": True}
 

@@ -12,8 +12,11 @@ Usage::
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 from datetime import date, datetime
+from typing import Any
 
 from ._client import KapHttpClient
 from ._endpoints import (
@@ -220,6 +223,86 @@ class Kap:
         members = [Company.from_row(CompanyRow.model_validate(r)) for r in rows]
         self._fund_members_cache[cache_key] = members
         return members
+
+    def fetch_fund_general_info(self, permalink: str) -> dict[str, Any]:
+        """Fetch general information of a fund from its KAP permalink page.
+
+        Parameters
+        ----------
+        permalink:
+            The fund's KAP permalink slug (e.g. ``"tly-tera-portfoy-birinci-serbest-fon"``).
+
+        Returns
+        -------
+        dict[str, Any]:
+            A dictionary containing parsed general information key-value pairs.
+        """
+        http = self._require_http()
+        url = f"https://www.kap.org.tr/tr/fon-bilgileri/genel/{permalink}"
+        html = http.get_html(url)
+
+        # Extract Next.js chunks from self.__next_f.push
+        chunks = []
+        matches = re.finditer(r'self\.__next_f\.push\(\[\d+,\s*"(.*?)"\]\)', html)
+        for m in matches:
+            escaped_chunk = m.group(1)
+            try:
+                chunk = json.loads(f'"{escaped_chunk}"')
+                chunks.append(chunk)
+            except Exception:
+                pass
+
+        full_payload = "".join(chunks)
+
+        results = {}
+
+        # Parse all objects having "itemName", "itemKey", "value"
+        idx = 0
+        while True:
+            idx = full_payload.find('"itemName":', idx)
+            if idx == -1:
+                break
+
+            start_brace = full_payload.rfind("{", 0, idx)
+            if start_brace != -1:
+                brace_count = 0
+                in_string = False
+                escape = False
+                end_idx = -1
+
+                for i in range(start_brace, len(full_payload)):
+                    char = full_payload[i]
+                    if escape:
+                        escape = False
+                        continue
+                    if char == "\\":
+                        escape = True
+                        continue
+                    if char == '"':
+                        in_string = not in_string
+                        continue
+                    if not in_string:
+                        if char == "{":
+                            brace_count += 1
+                        elif char == "}":
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_idx = i + 1
+                                break
+
+                if end_idx != -1:
+                    json_str = full_payload[start_brace:end_idx]
+                    try:
+                        obj = json.loads(json_str)
+                        if isinstance(obj, dict) and "itemName" in obj and "value" in obj:
+                            name = obj["itemName"].strip()
+                            results[name] = obj
+                    except Exception:
+                        pass
+
+            idx += 11
+
+        return results
 
     # ------------------------------------------------------------------
     # Disclosure methods
